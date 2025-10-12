@@ -528,7 +528,7 @@ def vst(
     genes_log10_gmean = npy.log10(row_gmean_sparse(umi, gmean_eps=gmean_eps))
     genes_log10_amean = npy.log10(npy.ravel(umi.mean(1)))
 
-    if n_cells is None and n_cells < umi.shape[1]:
+    if n_cells and n_cells < umi.shape[1]:
         # downsample cells to speed up the first step
         cells_step1_index = npy.random.choice(
             a=npy.arange(len(cell_names), dtype=int), size=n_cells, replace=False
