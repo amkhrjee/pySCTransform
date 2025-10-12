@@ -1,10 +1,10 @@
 """Main module."""
+
 import time
 import warnings
 
 from KDEpy import FFTKDE
-from scipy import interpolate
-from scipy import sparse
+from scipy import interpolate, sparse
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
 
 warnings.simplefilter("ignore", ConvergenceWarning)
@@ -15,28 +15,20 @@ import logging
 import numpy as npy
 import pandas as pd
 import statsmodels.discrete.discrete_model as dm
-from joblib import Parallel
-from joblib import delayed
+from joblib import Parallel, delayed
 from patsy import dmatrix
 from scipy import stats
 from scipy.sparse import csr_matrix
+from sklearn.utils.sparsefuncs import mean_variance_axis
 from statsmodels.nonparametric.kernel_regression import KernelReg
 from tqdm import tqdm
-from sklearn.utils.sparsefuncs import mean_variance_axis
 
 logging.captureWarnings(True)
 
 
-from .fit import alpha_lbfgs
-from .fit import estimate_mu_poisson
-from .fit import theta_lbfgs
-from .fit import theta_ml
-from .fit_glmgp import fit_glmgp
-from .fit_glmgp import fit_glmgp_offset
-
-from .r_bw import bw_SJr
-from .r_bw import is_outlier_r
-from .r_bw import ksmooth
+from .fit import alpha_lbfgs, estimate_mu_poisson, theta_lbfgs, theta_ml
+from .fit_glmgp import fit_glmgp, fit_glmgp_offset
+from .r_bw import bw_SJr, is_outlier_r, ksmooth
 
 
 def is_outlier_naive(x, snr_threshold=25):
@@ -72,9 +64,7 @@ def bwSJ(genes_log10_gmean_step1, bw_adjust=3):
 
 
 def robust_scale(x):
-    return (x - npy.median(x)) / (
-        stats.median_abs_deviation(x) + npy.finfo(float).eps
-    )
+    return (x - npy.median(x)) / (stats.median_abs_deviation(x) + npy.finfo(float).eps)
 
 
 def robust_scale_binned(y, x, breaks):
@@ -83,11 +73,7 @@ def robust_scale_binned(y, x, breaks):
     # categories = bins.categories
     # bins = npy.digitize(x=x, bins=breaks)
     df = pd.DataFrame({"x": y, "bins": bins})
-    tmp = df.groupby("bins").apply(robust_scale)
-    order = df["bins"].argsort()
-    tmp = tmp.loc[order]  # sort_values(by=["bins"])
-    score = tmp["x"]
-    return score
+    return df.groupby("bins")["x"].transform(lambda s: robust_scale(s.values))
 
 
 def is_outlier(y, x, th=10):
@@ -129,7 +115,6 @@ def row_gmean(umi, gmean_eps=1):
 
 
 def row_gmean_sparse(umi, gmean_eps=1):
-
     gmean = npy.asarray(npy.array([row_gmean(x.todense(), gmean_eps)[0] for x in umi]))
     gmean = npy.squeeze(gmean)
     return gmean
@@ -212,7 +197,6 @@ def get_model_params_pergene_glmgp_offset(gene_umi, coldata, log_umi, design="~ 
 def get_model_params_allgene_glmgp(
     umi, coldata, bin_size=500, threads=4, use_offset=False, verbosity=0
 ):
-
     results = []
     log_umi = npy.log(npy.ravel(umi.sum(0)))
     if use_offset:
@@ -232,7 +216,6 @@ def get_model_params_allgene_glmgp(
 def get_model_params_allgene(
     umi, model_matrix, method="fit", threads=4, fix_slope=False, verbosity=0
 ):
-
     results = []
     if fix_slope:
         gene_mean = umi.mean(1)
@@ -393,7 +376,6 @@ def get_residuals(
     residual_type="pearson",
     res_clip_range="default",
 ):
-
     """Get residuals for a fit model.
 
     Parameters
@@ -556,19 +538,11 @@ def vst(
         genes_step1 = genes[genes_cell_count_step1 >= min_cells]
         genes_log10_gmean_step1 = npy.log10(
             row_gmean_sparse(
-                umi[
-                    genes_step1,
-                ],
+                umi[genes_step1,],
                 gmean_eps=gmean_eps,
             )
         )
-        genes_log10_amean_step1 = npy.log10(
-            npy.ravel(
-                umi[
-                    genes_step1,
-                ].mean(1)
-            )
-        )
+        genes_log10_amean_step1 = npy.log10(npy.ravel(umi[genes_step1,].mean(1)))
         umi_step1 = umi[:, cells_step1_index]
     else:
         cells_step1_index = npy.arange(len(cell_names), dtype=int)
@@ -824,7 +798,7 @@ def SCTransform(
     n_genes=2000,
     res_clip_range="seurat",
     var_features_n=3000,
-    **kwargs
+    **kwargs,
 ):
     """Wrapper around vst
 
