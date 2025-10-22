@@ -1,34 +1,31 @@
 """Main module."""
 
-import time
-import warnings
-
-from KDEpy import FFTKDE
-from scipy import interpolate, sparse
-from statsmodels.tools.sm_exceptions import ConvergenceWarning
-
-warnings.simplefilter("ignore", ConvergenceWarning)
-warnings.simplefilter("ignore", RuntimeWarning)
 import concurrent.futures
 import logging
+import time
+import warnings
 
 import numpy as npy
 import pandas as pd
 import statsmodels.discrete.discrete_model as dm
 from joblib import Parallel, delayed
-from patsy import dmatrix
-from scipy import stats
+from KDEpy import FFTKDE
+from patsy import dmatrix  # type: ignore
+from scipy import interpolate, sparse, stats
 from scipy.sparse import csr_matrix
 from sklearn.utils.sparsefuncs import mean_variance_axis
 from statsmodels.nonparametric.kernel_regression import KernelReg
+from statsmodels.tools.sm_exceptions import ConvergenceWarning
 from tqdm import tqdm
-
-logging.captureWarnings(True)
-
 
 from .fit import alpha_lbfgs, estimate_mu_poisson, theta_lbfgs, theta_ml
 from .fit_glmgp import fit_glmgp, fit_glmgp_offset
 from .r_bw import bw_SJr, is_outlier_r, ksmooth
+
+warnings.simplefilter("ignore", ConvergenceWarning)
+warnings.simplefilter("ignore", RuntimeWarning)
+
+logging.captureWarnings(True)
 
 
 def is_outlier_naive(x, snr_threshold=25):
